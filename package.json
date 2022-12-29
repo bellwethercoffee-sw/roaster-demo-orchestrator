@@ -1,0 +1,29 @@
+{
+  "name": "roaster-demo-instance-spinner",
+  "version": "1.0.0",
+  "description": "App to Spin Roaster-Demo Apps on LightSail",
+  "main": "index.ts",
+  "scripts": {
+    "build": "npx tsc",
+    "start": "node dist/index.js",
+    "dev": "concurrently \"npx tsc --watch\" \"nodemon -q dist/index.js\""
+  },
+  "keywords": [
+    "roaster",
+    "demo",
+    "lightsail"
+  ],
+  "author": "David Maitho",
+  "license": "ISC",
+  "dependencies": {
+    "dotenv": "^16.0.3",
+    "express": "^4.18.2"
+  },
+  "devDependencies": {
+    "@types/express": "^4.17.15",
+    "@types/node": "^18.11.18",
+    "concurrently": "^7.6.0",
+    "nodemon": "^2.0.20",
+    "typescript": "^4.9.4"
+  }
+}
