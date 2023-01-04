@@ -1,0 +1,203 @@
+import {
+    ContainerService,
+    CreateContainerServiceCommand,
+    CreateContainerServiceDeploymentCommand,
+    DeleteContainerServiceCommand,
+    GetContainerServicesCommand,
+    GetContainerServicesCommandOutput,
+} from '@aws-sdk/client-lightsail';
+import {
+    GetRepositoryPolicyCommand,
+    GetRepositoryPolicyCommandOutput,
+    PutRegistryPolicyCommand,
+    SetRepositoryPolicyCommand,
+} from '@aws-sdk/client-ecr';
+import { v4 } from 'uuid';
+import { createECRClient, createLightsailClient } from './config/aws';
+import { eventBus, EventName } from './event-bus';
+import { logger } from './logger';
+
+const serviceNamePrefix = 'roaster-app-demo';
+const image = '025870537499.dkr.ecr.us-east-1.amazonaws.com/roaster-app:web-demo';
+const servicePort = '8000';
+
+export const createInstance = async (identifier: string) => {
+    const lightsail = await createLightsailClient();
+
+    const serviceName = `${serviceNamePrefix}-${identifier}`;
+    try {
+        const data = await lightsail.send(
+            new CreateContainerServiceCommand({
+                serviceName,
+                scale: 1,
+                power: 'micro',
+                tags: [{ key: 'creator', value: 'orchestrator' }],
+                privateRegistryAccess: {
+                    ecrImagePullerRole: {
+                        isActive: true,
+                    },
+                },
+            })
+        );
+
+        eventBus.emit(EventName.ServiceCreated, serviceName);
+        logger.log(data);
+        return data;
+    } catch (error) {
+        logger.log(error);
+        return null;
+    }
+};
+
+export const deploy = async (serviceName: string, service: ContainerService) => {
+    const lightsail = await createLightsailClient();
+
+    try {
+        const principalArn = service.privateRegistryAccess?.ecrImagePullerRole?.principalArn || '';
+        await attachRepositoryPolicy(serviceName, principalArn);
+
+        const data = await lightsail.send(
+            new CreateContainerServiceDeploymentCommand({
+                serviceName,
+                containers: {
+                    [serviceName]: {
+                        image: image,
+                        ports: {
+                            [servicePort]: 'HTTP',
+                        },
+                    },
+                },
+                publicEndpoint: {
+                    containerName: serviceName,
+                    containerPort: Number(servicePort),
+                    healthCheck: {
+                        healthyThreshold: 2,
+                        intervalSeconds: 5,
+                        path: '/',
+                        successCodes: '200-499',
+                        timeoutSeconds: 2,
+                        unhealthyThreshold: 2,
+                    },
+                },
+            })
+        );
+
+        logger.log(data);
+        return data;
+    } catch (error) {
+        logger.log(error);
+        return null;
+    }
+};
+
+export const queryInstance = async (
+    serviceName: string
+): Promise<GetContainerServicesCommandOutput> => {
+    try {
+        const lightsail = await createLightsailClient();
+        const data = await lightsail.send(
+            new GetContainerServicesCommand({
+                serviceName,
+            })
+        );
+
+        console.log(data);
+        return data;
+    } catch (error) {
+        throw error;
+    }
+};
+
+export const deleteInstance = async (serviceName: string) => {
+    try {
+        const lightsail = await createLightsailClient();
+        const data = await lightsail.send(
+            new DeleteContainerServiceCommand({
+                serviceName,
+            })
+        );
+
+        console.log(data);
+        return true;
+    } catch (error) {
+        console.log(error);
+        return false;
+    }
+};
+
+export const attachRegistryPolicy = async (serviceName: string) => {
+    try {
+        const client = await createECRClient();
+        const response = await client.send(
+            new GetRepositoryPolicyCommand({
+                repositoryName: 'roaster-app',
+                // policyText: `
+
+                // `.trim(),
+            })
+        );
+
+        console.log(response);
+        const policy = JSON.parse(response?.policyText || '');
+        logger.log(policy);
+        logger.log(JSON.stringify(policy));
+        return response;
+    } catch (error) {
+        console.log(error);
+        return false;
+    }
+};
+
+const getRepositoryPolicy = async (): Promise<GetRepositoryPolicyCommandOutput> => {
+    try {
+        const client = await createECRClient();
+        const response = await client.send(
+            new GetRepositoryPolicyCommand({
+                repositoryName: 'roaster-app',
+            })
+        );
+
+        console.log(response);
+        const policy = JSON.parse(response?.policyText || '');
+        logger.log(policy);
+        logger.log(JSON.stringify(policy));
+        return response;
+    } catch (error) {
+        console.log(error);
+        throw error;
+    }
+};
+
+export const attachRepositoryPolicy = async (serviceName: string, principalArn: string) => {
+    logger.debug('Attaching policy...');
+    try {
+        const o = await getRepositoryPolicy();
+
+        const policy = JSON.parse(o.policyText || '');
+        policy.Statement.push({
+            Sid: `AllowLightsailPull-${serviceName}`,
+            Effect: 'Allow',
+            Principal: {
+                AWS: principalArn,
+            },
+            Action: ['ecr:BatchGetImage', 'ecr:GetDownloadUrlForLayer'],
+        });
+        const client = await createECRClient();
+        const response = await client.send(
+            new SetRepositoryPolicyCommand({
+                registryId: o.registryId,
+                repositoryName: 'roaster-app',
+                policyText: JSON.stringify(policy),
+            })
+        );
+
+        console.log(response);
+        // const policy = JSON.parse(response?.policyText || '');
+        // logger.log(policy);
+        // logger.log(JSON.stringify(policy));
+        return response;
+    } catch (error) {
+        console.log(error);
+        throw error;
+    }
+};

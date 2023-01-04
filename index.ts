@@ -1,92 +1,32 @@
-import express, { Express, Request, Response } from 'express';
 import dotenv from 'dotenv';
-import * as AWS from "@aws-sdk/client-lightsail";
-import {v4 as uuidv4} from 'uuid';
-
-
 dotenv.config();
+import express, { Express, Request, Response } from 'express';
+
+import { eventsHandler } from './handlers/a';
+import { attachRegistryPolicy, createInstance, deleteInstance } from './lightsail';
+import { logger } from './logger';
+import { monitor } from './monitor';
 
 const app: Express = express();
-const port = process.env.PORT;
-const lightsail = new AWS.Lightsail({ region: "us-east-1" });
-const uuid = uuidv4();
+const port = 7001; // process.env.PORT;
 
-app.get('/', (req: Request, res: Response) => {
-  res.send('Express + TypeScript Server is Running');
+app.use(express.json());
+app.use(express.static('public'));
+
+app.get('/events', eventsHandler);
+
+app.post('/instance', async (req: Request, res: Response) => {
+    const { identifier } = req.body; // FIXME: Add validation
+
+    res.json({ data: await createInstance(identifier) });
 });
 
-app.get('/create-instance', (req: Request, res: Response) => {
-  res.send('Create Instance');
-  createContainerService()
+app.delete('/instance', async (req: Request, res: Response) => {
+    res.json({ data: await deleteInstance(req.body.serviceName) });
 });
 
-function listInstances(){
-  console.log("List LS Instances "+uuid)
-
-  const params = {
-    serviceName: 'roaster-app-demo-service'
-  };
-  lightsail.getContainerServices(params, function(err, data) {
-    if (err) console.log(err, err.stack); // an error occurred
-    else     console.log(data);           // successful response
-  });
-}
-
-function createContainerService(){
-  var params = {
-    power: 'micro', //nano | micro | small | medium | large | xlarge, /* required */
-    scale: 1, /* required */
-    serviceName: `roaster-app-demo-service-xyz`, /* required */
-    deployment: {
-      containers: {
-        'roaster-app-demo-service-xyz': {
-          // command: [
-          //   'STRING_VALUE',
-          //   /* more items */
-          // ],
-          environment: {
-            'PORT': '8000'
-          },
-          image: '025870537499.dkr.ecr.us-east-1.amazonaws.com/roaster-app:web-demo-4d5ec03',
-          ports: {
-            '8000': 'HTTP'
-          }
-        },
-        /* '<ContainerName>': ... */
-      },
-      publicEndpoint: {
-        containerName: 'roaster-app-demo-service-xyz', /* required */
-        containerPort: 8000, /* required */
-        healthCheck: {
-          healthyThreshold: 2,
-          intervalSeconds: 5,
-          path: '/',
-          successCodes: '200-499',
-          timeoutSeconds: 2,
-          unhealthyThreshold: 2
-        }
-      }
-    },
-    privateRegistryAccess: {
-      ecrImagePullerRole: {
-        isActive: true
-      }
-    },
-    tags: [
-      {
-        key: 'type',
-        value: 'ochestrator'
-      },
-      /* more items */
-    ]
-  };
-  lightsail.createContainerService(params, function(err: { stack: any; }, data: any) {
-    if (err) console.log(err, err.stack); // an error occurred
-    else     console.log(data);           // successful response
-  });
-}
-
+monitor.start();
 app.listen(port, () => {
-  console.log(`⚡️[server]: Server is running at http://localhost:${port}`);
-  listInstances()
+    logger.log(`⚡️[server]: Server is running at http://localhost:${port}`);
+    attachRegistryPolicy('');
 });
