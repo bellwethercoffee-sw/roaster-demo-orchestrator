@@ -41,10 +41,9 @@ export const createInstance = async (identifier: string) => {
         );
 
         eventBus.emit(EventName.ServiceCreated, serviceName);
-        logger.log(data);
         return data;
     } catch (error) {
-        logger.log(error);
+        logger.error(error);
         return null;
     }
 };
@@ -85,10 +84,9 @@ export const deploy = async (service: ContainerService) => {
             })
         );
 
-        logger.log(data);
         return data;
     } catch (error) {
-        logger.log(error);
+        logger.error(error);
         return null;
     }
 };
@@ -147,7 +145,7 @@ const getRepositoryPolicy = async (): Promise<GetRepositoryPolicyCommandOutput> 
         // logger.log(JSON.stringify(policy));
         return response;
     } catch (error) {
-        logger.log(error);
+        logger.error(error);
         throw error;
     }
 };

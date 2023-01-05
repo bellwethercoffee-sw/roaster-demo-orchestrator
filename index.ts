@@ -27,5 +27,5 @@ app.delete('/instance', async (req: Request, res: Response) => {
 
 monitor.start();
 app.listen(port, () => {
-    logger.log(`⚡️[server]: Server is running at http://localhost:${port}`);
+    logger.info(`⚡️[server]: Server is running at http://localhost:${port}`);
 });
