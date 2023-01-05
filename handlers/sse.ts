@@ -1,4 +1,6 @@
 import { Request, Response } from 'express';
+import { eventBus, EventName } from '../event-bus';
+import { logger } from '../logger';
 
 export let clients: any[] = [];
 export const eventsHandler = (request: Request, response: Response) => {
@@ -7,10 +9,27 @@ export const eventsHandler = (request: Request, response: Response) => {
         Connection: 'keep-alive',
         'Cache-Control': 'no-cache',
     };
-    response.writeHead(200, headers);
 
-    // const facts: any = [];
-    const clientId = Date.now();
+    const clientId = request.query.clientId;
+    logger.debug(`Client ID: ${clientId}`);
+    response.writeHead(200, headers);
+    eventBus.on(EventName.ServiceCreated, (serviceName: string) => {
+        const data = `data: ${JSON.stringify({
+            event: 'ServiceCreated',
+            serviceName,
+        })}\n\n`;
+
+        response.write(data);
+    });
+    eventBus.on(EventName.DeploymentIsReady, (serviceName: string, url: string) => {
+        const data = `data: ${JSON.stringify({
+            event: EventName.DeploymentIsReady,
+            serviceName,
+            url,
+        })}\n\n`;
+
+        response.write(data);
+    });
 
     const data = `event: id\ndata: ${JSON.stringify({ id: clientId })}\n\n`;
 

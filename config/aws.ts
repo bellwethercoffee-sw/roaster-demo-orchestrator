@@ -38,10 +38,10 @@ export const requestTemporaryCredentials = async () => {
     try {
         const data = await client.send(command);
         logger.debug('New credentials');
-        logger.debug(data);
+        // logger.debug(data);
         return data;
     } catch (error) {
-        console.error(error);
+        logger.error(error);
 
         return null;
     }

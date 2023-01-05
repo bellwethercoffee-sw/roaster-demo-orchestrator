@@ -2,13 +2,13 @@ import dotenv from 'dotenv';
 dotenv.config();
 import express, { Express, Request, Response } from 'express';
 
-import { eventsHandler } from './handlers/a';
-import { attachRegistryPolicy, createInstance, deleteInstance } from './lightsail';
+import { eventsHandler } from './handlers/sse';
+import { createInstance, deleteInstance } from './lightsail';
 import { logger } from './logger';
 import { monitor } from './monitor';
 
 const app: Express = express();
-const port = 7001; // process.env.PORT;
+const port = process.env.PORT || 3000;
 
 app.use(express.json());
 app.use(express.static('public'));
@@ -28,5 +28,4 @@ app.delete('/instance', async (req: Request, res: Response) => {
 monitor.start();
 app.listen(port, () => {
     logger.log(`⚡️[server]: Server is running at http://localhost:${port}`);
-    attachRegistryPolicy('');
 });

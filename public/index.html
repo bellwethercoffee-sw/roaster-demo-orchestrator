@@ -4,10 +4,50 @@
         <meta charset="UTF-8" />
         <meta http-equiv="X-UA-Compatible" content="IE=edge" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-        <title>Demo Orchestrator</title>
+        <title>Demo App Orchestrator</title>
         <script src="scripts/index.js" defer></script>
+        <style>
+            main {
+                font-family: -apple-system, system-ui, 'Segoe UI', Helvetica, Arial, sans-serif,
+                    'Apple Color Emoji', 'Segoe UI Emoji';
+                display: flex;
+                flex-direction: column;
+                justify-content: center;
+                min-height: 100vh;
+            }
+            .content {
+                display: flex;
+                flex-direction: column;
+                /* justify-content: center; */
+            }
+            .button {
+                padding: 3em;
+                margin: auto;
+                margin-bottom: 1em;
+                width: 50%;
+                font-size: 200%;
+                /* font-weight: 900; */
+                /* font-family: -apple-system, system-ui, 'Segoe UI', Helvetica, Arial, sans-serif, */
+                /* 'Apple Color Emoji', 'Segoe UI Emoji'; */
+                border-radius: 1em;
+            }
+            .button.create {
+                color: white;
+                background-color: green;
+            }
+            .button.delete {
+                color: white;
+                background-color: red;
+            }
+        </style>
     </head>
     <body>
-        <button id="btn-create" style="padding: 5em; width: 50%; margin: auto">Create</button>
+        <main>
+            <div class="content">
+                <div id="url" style="text-align: center; margin-bottom: 1em; font-size: 120%"></div>
+                <button id="btn-create" class="button create">Create</button>
+                <button id="btn-delete" class="button delete">Delete</button>
+            </div>
+        </main>
     </body>
 </html>

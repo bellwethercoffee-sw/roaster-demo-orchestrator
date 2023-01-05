@@ -1,1 +1,1 @@
-import { eventsHandler } from '../handlers/a';
+import { eventsHandler } from '../handlers/sse';
