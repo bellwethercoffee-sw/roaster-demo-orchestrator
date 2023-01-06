@@ -1,20 +1,18 @@
-import { STSClient, AssumeRoleCommand, Credentials } from '@aws-sdk/client-sts';
-import { LightsailClient } from '@aws-sdk/client-lightsail';
+import { STSClient, AssumeRoleCommand } from '@aws-sdk/client-sts';
+import { LightsailClient, LightsailClientConfig } from '@aws-sdk/client-lightsail';
+import { ECRClient, ECRClientConfig } from '@aws-sdk/client-ecr';
 
 import { AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_ASSUME_ROLE_ARN, AWS_REGION } from '.';
-import { ECRClient } from '@aws-sdk/client-ecr';
+import { logger } from '../logger';
 
 const REQUEST_DELAY = 5;
 const endpoint = null; // LOCALSTACK_ENDPOINT_URL
 const region = AWS_REGION;
 
 let credentials: any = null;
-const logger = console;
 
 const getConfig = () => {
-    const config: any = {
-        region,
-    };
+    const config: any = {};
 
     if (AWS_ACCESS_KEY_ID) config.accessKeyId = AWS_ACCESS_KEY_ID;
     if (AWS_SECRET_ACCESS_KEY) config.secretAccessKey = AWS_SECRET_ACCESS_KEY;
@@ -30,15 +28,13 @@ export const requestTemporaryCredentials = async () => {
     const command = new AssumeRoleCommand({
         RoleArn: AWS_ASSUME_ROLE_ARN,
         RoleSessionName: 'orchestrator-app',
-        DurationSeconds: 60 * 15,
+        DurationSeconds: 60 * 60,
     });
 
-    // logger.debug('Accessing temporary permission');
-    // logger.debug(config);
     try {
         const data = await client.send(command);
         logger.debug('New credentials');
-        // logger.debug(data);
+
         return data;
     } catch (error) {
         logger.error(error);
@@ -47,10 +43,9 @@ export const requestTemporaryCredentials = async () => {
     }
 };
 
-// @TODO: rename to credentialsHasExpired or expiredCredentials
-const credentialsHasNotExpired = (credentials: any): boolean => {
+const validCredentialsAvailable = (credentials: any): boolean => {
     logger.debug('Checking if there is a valid credentail to use');
-    if (!credentials.Expiration) return false;
+    if (!credentials || !credentials.Expiration) return false;
 
     const now = new Date().getTime();
     const expiration = credentials.Expiration.getTime();
@@ -58,11 +53,7 @@ const credentialsHasNotExpired = (credentials: any): boolean => {
     return expiration - now > REQUEST_DELAY;
 };
 
-const validCredentialsAvailable = (credentials: Credentials): boolean => {
-    return !credentials ? false : credentialsHasNotExpired(credentials);
-};
-
-const extractConfigForServiceCall = (credentials: any) => {
+const formatCredentials = (credentials: any) => {
     const {
         AccessKeyId: accessKeyId,
         SecretAccessKey: secretAccessKey,
@@ -70,7 +61,6 @@ const extractConfigForServiceCall = (credentials: any) => {
     } = credentials;
 
     const config: any = {
-        region: AWS_REGION,
         accessKeyId,
         secretAccessKey,
         sessionToken,
@@ -95,40 +85,41 @@ const getOrRequestCredentials = async () => {
     return credentials;
 };
 
-const getConfigForService = async () => {
-    let config;
+const getCredentialsForServiceCall = async () => {
+    const useAccessKey = !!AWS_ACCESS_KEY_ID && !!AWS_SECRET_ACCESS_KEY;
+    const useAssumeRole = !!AWS_ASSUME_ROLE_ARN;
 
-    if (AWS_ASSUME_ROLE_ARN) {
+    let formattedCredentials: any = null;
+    if (useAssumeRole) {
         credentials = await getOrRequestCredentials();
-        config = extractConfigForServiceCall(credentials);
-    } else {
-        config = getConfig();
+        formattedCredentials = formatCredentials(credentials);
+    } else if (useAccessKey) {
+        formattedCredentials = getConfig();
     }
 
-    return config;
+    return formattedCredentials;
 };
 
 export const createLightsailClient = async (): Promise<LightsailClient> => {
-    let config;
-
-    if (AWS_ASSUME_ROLE_ARN) {
-        credentials = await getOrRequestCredentials();
-        config = extractConfigForServiceCall(credentials);
-    } else {
-        config = getConfig();
-    }
-
-    return new LightsailClient({
+    let config: LightsailClientConfig = {
         apiVersion: '2016-11-28',
-        credentials: config,
-    });
+        region,
+    };
+
+    const credentails = await getCredentialsForServiceCall();
+    if (credentails) config.credentials = credentails;
+
+    return new LightsailClient(config);
 };
 
 export const createECRClient = async (): Promise<ECRClient> => {
-    return new ECRClient({
-        // apiVersion: '2016-11-28',
-        credentials: await getConfigForService(),
-    });
-};
+    const config: ECRClientConfig = {
+        apiVersion: '2015-09-21',
+        region,
+    };
 
-// export { createLightsailClient };
+    const credentails = await getCredentialsForServiceCall();
+    if (credentails) config.credentials = credentails;
+
+    return new ECRClient(config);
+};
