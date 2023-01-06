@@ -32,7 +32,7 @@ class Monitor {
         logger.debug('Watching service creation completion');
         this.serviceTimer = setInterval(() => {
             this.checkNewServiceReadiness();
-        }, 1000 * 60 * 1);
+        }, 1000 * 45);
     }
 
     private unwatchService() {

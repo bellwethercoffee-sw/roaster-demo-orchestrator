@@ -1,11 +1,43 @@
-let identifier;
-let serviceName;
+let clientId
+let serviceName
 
 const EVENT_SERVICE_CREATED = 'ServiceCreated'
 const EVENT_DEPLOYMENT_RUNNING = 'DeploymentIsReady'
 
-window.addEventListener('load', () => {
-    const clientId = randomId();
+class ClientIdStore {
+    static KEY = 'clientId'
+
+    write(clientId) {
+        sessionStorage.setItem(ClientIdStore.KEY, clientId)
+    }
+
+    read() {
+        return sessionStorage.getItem(ClientIdStore.KEY)
+    }
+
+    clear() {
+        sessionStorage.removeItem(ClientIdStore.KEY)
+        clientId = null
+    }
+}
+
+const store = new ClientIdStore()
+
+window.addEventListener('load', async () => {
+    clientId = store.read();
+
+    if (clientId) {
+        const service = await findService(clientId)
+
+        if (service) {
+            serviceName = service.containerServiceName;
+            showUrl(service.url)
+        }
+    } else {
+        clientId = generateClientId();
+        store.write(clientId)
+    }
+
     const evtSource = new EventSource(`/events?clientId=${clientId}`);
 
     evtSource.addEventListener('id', (event) => {
@@ -13,8 +45,8 @@ window.addEventListener('load', () => {
         const id = JSON.parse(event.data).id;
 
         if (clientId === id) {
-            identifier = id
-            console.debug(`Client confirmed: ${clientId} -> ${identifier}`);
+            // identifier = id
+            console.debug(`Client confirmed: ${clientId} -> ${id}`);
         }
     });
 
@@ -22,11 +54,11 @@ window.addEventListener('load', () => {
         console.info('Message received')
         const data = JSON.parse(event.data)
 
-        if (data.event === EVENT_SERVICE_CREATED && data.serviceName.endsWith(identifier)) {
+        if (data.event === EVENT_SERVICE_CREATED && data.serviceName.endsWith(clientId)) {
             console.debug(`Service created with name ${data.serviceName}`)
             serviceName = data.serviceName;
         }
-        if (data.event === EVENT_DEPLOYMENT_RUNNING && data.serviceName.endsWith(identifier)) {
+        if (data.event === EVENT_DEPLOYMENT_RUNNING && data.serviceName.endsWith(clientId)) {
             showUrl(data.url)
         }
         console.log(event);
@@ -44,10 +76,32 @@ const removeUrl = () => {
     document.querySelector('#url').innerHTML = ''
 }
 
+const findService = async (clientId) => {
+    console.debug(`Find service with identifier ${clientId}`)
+
+    try {
+        const response = await fetch(`/instance?clientId=${clientId}`, {
+            headers: { 'Content-Type': 'application/json' }
+        })
+
+        const data = await response.json()
+
+        if (response.ok) {
+            console.debug(data)
+            return data
+        }
+
+        return null
+    } catch (err) {
+        console.error(`Error when finding an instance failed. Reason: ${err.message}`)
+        return null
+    }
+}
+
 const createHandler = async () => {
-    console.log('Creating... for', identifier)
-    if (!identifier) {
-        console.info(`Sorry, an instance cannot be create if there is no identifier: ${identifier}`)
+    console.log('Creating... for', clientId)
+    if (!clientId) {
+        console.info(`Sorry, you cannot destroy what you have not created: ${clientId}`)
         return
     }
 
@@ -55,7 +109,7 @@ const createHandler = async () => {
         const response = await fetch('/instance', {
             headers: { 'Content-Type': 'application/json' },
             method: 'POST',
-            body: JSON.stringify({ identifier })
+            body: JSON.stringify({ clientId })
         })
 
         const data = await response.json()
@@ -67,12 +121,11 @@ const createHandler = async () => {
 
 const deleteHandler = async () => {
     if (!serviceName) {
-        console.info(`Sorry, an instance cannot be create if there is no identifier: ${identifier}`);
         alert("Sorry, this operation is only possible after you've sucessfully created one.")
         return
     }
 
-    console.info(`Deleting ${serviceName}`)
+    console.info(`Destroying service ${serviceName}`)
 
     try {
         const response = await fetch('/instance', {
@@ -84,13 +137,16 @@ const deleteHandler = async () => {
         const data = await response.json()
         console.debug(data)
         serviceName = null
-        removeUrl();
+        store.clear()
+        removeUrl()
+
+        alert('Destroying the created instance')
     } catch (err) {
-        alert(`Deleting an instance failed. Reason: ${err.message}`)
+        alert(`Destroing the service ${serviceName} failed. Reason: ${err.message}`)
     }
 }
 
-function randomId() {
+function generateClientId() {
     const uint32 = window.crypto.getRandomValues(
         new Uint32Array(1)
     )[0];

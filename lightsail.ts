@@ -9,10 +9,8 @@ import {
 import {
     GetRepositoryPolicyCommand,
     GetRepositoryPolicyCommandOutput,
-    PutRegistryPolicyCommand,
     SetRepositoryPolicyCommand,
 } from '@aws-sdk/client-ecr';
-import { v4 } from 'uuid';
 import { createECRClient, createLightsailClient } from './config/aws';
 import { eventBus, EventName } from './event-bus';
 import { logger } from './logger';
@@ -21,10 +19,14 @@ const serviceNamePrefix = 'roaster-app-demo';
 const image = '025870537499.dkr.ecr.us-east-1.amazonaws.com/roaster-app:web-demo';
 const servicePort = '8000';
 
+export const createServiceName = (clientId: string): string => {
+    return `${serviceNamePrefix}-${clientId}`;
+};
+
 export const createInstance = async (identifier: string) => {
     const lightsail = await createLightsailClient();
 
-    const serviceName = `${serviceNamePrefix}-${identifier}`;
+    const serviceName = createServiceName(identifier);
     try {
         const data = await lightsail.send(
             new CreateContainerServiceCommand({
@@ -104,7 +106,8 @@ export const queryInstance = async (
 
         // console.log(data);
         return data;
-    } catch (error) {
+    } catch (error: any) {
+        console.error(error.$metadata);
         throw error;
     }
 };

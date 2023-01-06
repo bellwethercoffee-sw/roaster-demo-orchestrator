@@ -3,7 +3,7 @@ dotenv.config();
 import express, { Express, Request, Response } from 'express';
 
 import { eventsHandler } from './handlers/sse';
-import { createInstance, deleteInstance } from './lightsail';
+import { createInstance, createServiceName, deleteInstance, queryInstance } from './lightsail';
 import { logger } from './logger';
 import { monitor } from './monitor';
 
@@ -15,10 +15,23 @@ app.use(express.static('public'));
 
 app.get('/events', eventsHandler);
 
-app.post('/instance', async (req: Request, res: Response) => {
-    const { identifier } = req.body; // FIXME: Add validation
+app.get('/instance', async (req: Request, res: Response) => {
+    const clientId = <string>req.query.clientId; // FIXME: Add validation
+    const serviceName = createServiceName(clientId);
 
-    res.json({ data: await createInstance(identifier) });
+    try {
+        const data = await queryInstance(serviceName);
+        res.json({ ...data.containerServices![0] });
+    } catch (error: any) {
+        const status = error.$metadata.httpStatusCode;
+        res.status(status).json({ message: error.message, details: { serviceName } });
+    }
+});
+
+app.post('/instance', async (req: Request, res: Response) => {
+    const { clientId } = req.body; // FIXME: Add validation
+
+    res.json({ data: await createInstance(clientId) });
 });
 
 app.delete('/instance', async (req: Request, res: Response) => {
