@@ -2,7 +2,16 @@ let clientId
 let serviceName
 
 const EVENT_SERVICE_CREATED = 'ServiceCreated'
-const EVENT_DEPLOYMENT_RUNNING = 'DeploymentIsReady'
+const EVENT_SERVICE_DELETED = 'ServiceDeleted'
+const EVENT_DEPLOYMENT_RUNNING = 'DeploymentRunning'
+const EVENT_DEPLOYMENT_STARTED = 'DeploymentStarted'
+
+const clientSpecificEvents = [
+    EVENT_DEPLOYMENT_RUNNING,
+    EVENT_DEPLOYMENT_STARTED,
+    EVENT_SERVICE_CREATED,
+    EVENT_SERVICE_DELETED,
+]
 
 class ClientIdStore {
     static KEY = 'clientId'
@@ -23,7 +32,7 @@ class ClientIdStore {
 
 const store = new ClientIdStore()
 
-window.addEventListener('load', async () => {
+const init = async () => {
     clientId = store.read();
 
     if (clientId) {
@@ -41,11 +50,10 @@ window.addEventListener('load', async () => {
     const evtSource = new EventSource(`/events?clientId=${clientId}`);
 
     evtSource.addEventListener('id', (event) => {
-        console.log('Id event');
         const id = JSON.parse(event.data).id;
+        console.log(`Id event received: ${id}`);
 
         if (clientId === id) {
-            // identifier = id
             console.debug(`Client confirmed: ${clientId} -> ${id}`);
         }
     });
@@ -54,18 +62,46 @@ window.addEventListener('load', async () => {
         console.info('Message received')
         const data = JSON.parse(event.data)
 
-        if (data.event === EVENT_SERVICE_CREATED && data.serviceName.endsWith(clientId)) {
-            console.debug(`Service created with name ${data.serviceName}`)
-            serviceName = data.serviceName;
+
+        if (clientSpecificEvents.includes(data.event) && !data.serviceName.endsWith(clientId)) return
+
+        switch (data.event) {
+            case EVENT_SERVICE_CREATED:
+                console.debug(`Service created with name ${data.serviceName}`)
+                serviceName = data.serviceName;
+                break;
+
+            case EVENT_SERVICE_DELETED:
+                console.debug(`Service deleted with name ${data.serviceName}`)
+                cleanup()
+
+                clientId = generateClientId();
+                store.write(clientId)
+                break;
+
+            case EVENT_DEPLOYMENT_RUNNING:
+                console.info(`Deployment completed for ${data.serviceName}`)
+                showUrl(data.url)
+                break;
+
+            case EVENT_DEPLOYMENT_STARTED:
+                console.info(`Deployment started for ${data.serviceName}`)
+                break;
         }
-        if (data.event === EVENT_DEPLOYMENT_RUNNING && data.serviceName.endsWith(clientId)) {
-            showUrl(data.url)
-        }
-        console.log(event);
+
+        console.log(data);
+    };
+
+    evtSource.onerror = (err) => {
+        console.error("EventSource failed:", err);
     };
 
     document.querySelector('#btn-create').addEventListener('click', createHandler)
     document.querySelector('#btn-delete').addEventListener('click', deleteHandler)
+}
+
+window.addEventListener('load', () => {
+    init()
 });
 
 const showUrl = (url) => {
@@ -136,14 +172,18 @@ const deleteHandler = async () => {
 
         const data = await response.json()
         console.debug(data)
-        serviceName = null
-        store.clear()
-        removeUrl()
+        cleanup()
 
         alert('Destroying the created instance')
     } catch (err) {
         alert(`Destroing the service ${serviceName} failed. Reason: ${err.message}`)
     }
+}
+
+const cleanup = () => {
+    serviceName = null
+    store.clear()
+    removeUrl()
 }
 
 function generateClientId() {

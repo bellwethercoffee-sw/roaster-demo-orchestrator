@@ -1,10 +1,13 @@
 import EventEmitter from 'events';
 
 export enum EventName {
+    ServiceCreationStarted = 'ServiceCreationStarted',
     ServiceCreated = 'ServiceCreated',
     ServiceIsReady = 'ServiceIsReady',
+    ServiceDeleted = 'ServiceDeleted',
+
     DeploymentStarted = 'DeploymentStarted',
-    DeploymentIsReady = 'DeploymentIsReady',
+    DeploymentRunning = 'DeploymentRunning',
 }
 
 class EventBus extends EventEmitter {}

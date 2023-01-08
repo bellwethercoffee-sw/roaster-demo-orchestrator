@@ -107,7 +107,7 @@ export const queryInstance = async (
         // console.log(data);
         return data;
     } catch (error: any) {
-        console.error(error.$metadata);
+        // console.error(error.$metadata);
         throw error;
     }
 };
@@ -125,6 +125,7 @@ export const deleteInstance = async (serviceName: string) => {
             })
         );
 
+        eventBus.emit(EventName.ServiceDeleted, serviceName);
         // console.log(data);
         return true;
     } catch (error) {

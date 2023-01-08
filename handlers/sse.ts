@@ -1,3 +1,4 @@
+import { ContainerService } from '@aws-sdk/client-lightsail';
 import { Request, Response } from 'express';
 import { eventBus, EventName } from '../event-bus';
 import { logger } from '../logger';
@@ -15,17 +16,33 @@ export const eventsHandler = (request: Request, response: Response) => {
     response.writeHead(200, headers);
     eventBus.on(EventName.ServiceCreated, (serviceName: string) => {
         const data = `data: ${JSON.stringify({
-            event: 'ServiceCreated',
+            event: EventName.ServiceCreated,
             serviceName,
         })}\n\n`;
 
         response.write(data);
     });
-    eventBus.on(EventName.DeploymentIsReady, (serviceName: string, url: string) => {
+    eventBus.on(EventName.ServiceDeleted, (serviceName: string) => {
         const data = `data: ${JSON.stringify({
-            event: EventName.DeploymentIsReady,
+            event: EventName.ServiceDeleted,
+            serviceName,
+        })}\n\n`;
+
+        response.write(data);
+    });
+    eventBus.on(EventName.DeploymentRunning, (serviceName: string, url: string) => {
+        const data = `data: ${JSON.stringify({
+            event: EventName.DeploymentRunning,
             serviceName,
             url,
+        })}\n\n`;
+
+        response.write(data);
+    });
+    eventBus.on(EventName.DeploymentStarted, (service: ContainerService) => {
+        const data = `data: ${JSON.stringify({
+            event: EventName.DeploymentStarted,
+            serviceName: service.containerServiceName,
         })}\n\n`;
 
         response.write(data);

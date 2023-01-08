@@ -44,7 +44,7 @@ export const requestTemporaryCredentials = async () => {
 };
 
 const validCredentialsAvailable = (credentials: any): boolean => {
-    logger.debug('Checking if there is a valid credentail to use');
+    // logger.debug('Checking if there is a valid credentail to use');
     if (!credentials || !credentials.Expiration) return false;
 
     const now = new Date().getTime();
