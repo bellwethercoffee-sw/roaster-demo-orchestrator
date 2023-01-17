@@ -9,7 +9,7 @@ RUN yarn build
 FROM node:16 as ts-remover
 WORKDIR /usr/app
 COPY --from=ts-compiler /usr/app/package*.json ./
-COPY --from=ts-compiler /usr/app/dist ./
+COPY --from=ts-compiler /usr/app/dist ./dist
 COPY --from=ts-compiler /usr/app/public ./public
 RUN yarn install --only=production
 
