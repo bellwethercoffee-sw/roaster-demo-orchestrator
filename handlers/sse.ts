@@ -22,6 +22,14 @@ export const eventsHandler = (request: Request, response: Response) => {
 
         response.write(data);
     });
+    eventBus.on(EventName.ServiceIsReady, (service: ContainerService) => {
+        const data = `data: ${JSON.stringify({
+            event: EventName.ServiceIsReady,
+            serviceName: service?.containerServiceName,
+        })}\n\n`;
+
+        response.write(data);
+    });
     eventBus.on(EventName.ServiceDeleted, (serviceName: string) => {
         const data = `data: ${JSON.stringify({
             event: EventName.ServiceDeleted,

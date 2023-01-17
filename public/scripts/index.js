@@ -1,7 +1,9 @@
 let clientId
 let serviceName
 
+
 const EVENT_SERVICE_CREATED = 'ServiceCreated'
+const EVENT_SERVICE_READY = 'ServiceIsReady'
 const EVENT_SERVICE_DELETED = 'ServiceDeleted'
 const EVENT_DEPLOYMENT_RUNNING = 'DeploymentRunning'
 const EVENT_DEPLOYMENT_STARTED = 'DeploymentStarted'
@@ -10,29 +12,129 @@ const clientSpecificEvents = [
     EVENT_DEPLOYMENT_RUNNING,
     EVENT_DEPLOYMENT_STARTED,
     EVENT_SERVICE_CREATED,
+    EVENT_SERVICE_READY,
     EVENT_SERVICE_DELETED,
 ]
 
-class ClientIdStore {
+class ClientIdHelper {
     static KEY = 'clientId'
 
     write(clientId) {
-        sessionStorage.setItem(ClientIdStore.KEY, clientId)
+        sessionStorage.setItem(ClientIdHelper.KEY, clientId)
     }
 
     read() {
-        return sessionStorage.getItem(ClientIdStore.KEY)
+        return sessionStorage.getItem(ClientIdHelper.KEY)
     }
 
     clear() {
-        sessionStorage.removeItem(ClientIdStore.KEY)
+        sessionStorage.removeItem(ClientIdHelper.KEY)
         clientId = null
+    }
+
+    static generateClientId() {
+        const uint32 = window.crypto.getRandomValues(
+            new Uint32Array(1)
+        )[0];
+
+        return uint32.toString(16);
     }
 }
 
-const store = new ClientIdStore()
+class ProgressReport {
+    SUCCESS_ICON = 'assets/images/correct-success-tick-svgrepo-com.svg'
+    FAIL_ICON = 'assets/images/wrong-cancel-close-svgrepo-com.svg'
+    SPINNER_ICON = 'assets/images/spinner-solid-svgrepo-com.svg'
+
+    IMAGE = 0
+    SPAN = 1
+
+    constructor() {
+        this.progressReportElem = document.querySelector('#progress-report')
+
+        console.debug(this.progressReportElem)
+        this.serviceElem = document.querySelector('#progress-report-service')
+        this.deploymentElem = document.querySelector('#progress-report-deployment')
+    }
+
+    init() {
+        this.#hideElement(this.serviceElem)
+        this.#hideElement(this.deploymentElem)
+    }
+
+    show() {
+        this.progressReportElem.classList.remove('hide')
+    }
+
+    hide() {
+        setTimeout(() => {
+            this.progressReportElem.classList.add('hide')
+
+            this.#hideElement(this.serviceElem)
+            this.#hideElement(this.deploymentElem)
+
+        }, 1000)
+    }
+
+    #hideElement(elem) {
+        elem.classList.add('hide')
+    }
+
+    #showElement(elem) {
+        elem.classList.remove('hide')
+    }
+
+    startServiceCreation() {
+        this.show()
+        this.#showElement(this.serviceElem)
+        this.serviceElem.children[this.IMAGE].src = this.SPINNER_ICON
+    }
+
+    serviceCreated(successful = true) {
+        this.show()
+        this.#showElement(this.serviceElem)
+        this.serviceElem.children[this.IMAGE].src = successful ? this.SUCCESS_ICON : this.FAIL_ICON
+    }
+
+    deploymentStarted() {
+        this.show()
+        this.#showElement(this.deploymentElem)
+        this.deploymentElem.children[this.IMAGE].src = this.SPINNER_ICON
+    }
+
+    deploymentComplete(successful = true) {
+        this.show()
+        this.#showElement(this.deploymentElem)
+
+        this.deploymentElem.children[this.IMAGE].src = successful ? this.SUCCESS_ICON : this.FAIL_ICON
+    }
+
+}
+
+class URLReport {
+    constructor() {
+        this.elem = document.querySelector('#url-report')
+    }
+
+    show(url) {
+        this.elem.classList.remove('hide')
+
+        document.querySelector('#url-report-app').innerHTML = `<a href="${url}" target="_blank">${url}</a>`
+        document.querySelector('#url-report-user-actions').innerHTML = `<a href="${url}actions.html" target="_blank">${url}actions.html</a>`
+    }
+
+    hide() {
+        this.elem.classList.add('hide')
+    }
+}
+
+const store = new ClientIdHelper()
+const progressReport = new ProgressReport()
+const urlReport = new URLReport()
 
 const init = async () => {
+    // progressReport = new ProgressReport();
+
     clientId = store.read();
 
     if (clientId) {
@@ -40,10 +142,10 @@ const init = async () => {
 
         if (service) {
             serviceName = service.containerServiceName;
-            showUrl(service.url)
+            urlReport.show(service.url)
         }
     } else {
-        clientId = generateClientId();
+        clientId = ClientIdHelper.generateClientId();
         store.write(clientId)
     }
 
@@ -62,30 +164,35 @@ const init = async () => {
         console.info('Message received')
         const data = JSON.parse(event.data)
 
-
         if (clientSpecificEvents.includes(data.event) && !data.serviceName.endsWith(clientId)) return
 
         switch (data.event) {
-            case EVENT_SERVICE_CREATED:
-                console.debug(`Service created with name ${data.serviceName}`)
+            // case EVENT_SERVICE_CREATED:
+            case EVENT_SERVICE_READY:
+                console.debug(`Service created & ready with name ${data.serviceName}`)
                 serviceName = data.serviceName;
+                progressReport.serviceCreated()
                 break;
 
             case EVENT_SERVICE_DELETED:
                 console.debug(`Service deleted with name ${data.serviceName}`)
                 cleanup()
 
-                clientId = generateClientId();
+                clientId = ClientIdHelper.generateClientId();
                 store.write(clientId)
                 break;
 
             case EVENT_DEPLOYMENT_RUNNING:
                 console.info(`Deployment completed for ${data.serviceName}`)
-                showUrl(data.url)
+                progressReport.deploymentComplete()
+                progressReport.hide()
+                urlReport.show(data.url)
+
                 break;
 
             case EVENT_DEPLOYMENT_STARTED:
                 console.info(`Deployment started for ${data.serviceName}`)
+                progressReport.deploymentStarted()
                 break;
         }
 
@@ -104,21 +211,12 @@ window.addEventListener('load', () => {
     init()
 });
 
-const showUrl = (url) => {
-    console.debug(`Here is your url: ${url}`)
-    document.querySelector('#url').innerHTML = `<a href="${url}" target="_blank">${url}</a>`
-}
-const removeUrl = () => {
-    document.querySelector('#url').innerHTML = ''
-}
 
 const findService = async (clientId) => {
     console.debug(`Find service with identifier ${clientId}`)
 
     try {
-        const response = await fetch(`/instance?clientId=${clientId}`, {
-            headers: { 'Content-Type': 'application/json' }
-        })
+        const response = await fetch(`/api/instance?clientId=${clientId}`)
 
         const data = await response.json()
 
@@ -142,13 +240,18 @@ const createHandler = async () => {
     }
 
     try {
-        const response = await fetch('/instance', {
-            headers: { 'Content-Type': 'application/json' },
+        const response = await fetch('/api/instance', {
             method: 'POST',
             body: JSON.stringify({ clientId })
         })
 
         const data = await response.json()
+
+        if (response.ok)
+            progressReport.startServiceCreation()
+        else {
+            console.error('Failed')
+        }
         console.debug(data)
     } catch (err) {
         alert(`Creating an instance failed. Reason: ${err.message}`)
@@ -164,8 +267,7 @@ const deleteHandler = async () => {
     console.info(`Destroying service ${serviceName}`)
 
     try {
-        const response = await fetch('/instance', {
-            headers: { 'Content-Type': 'application/json' },
+        const response = await fetch('/api/instance', {
             method: 'DELETE',
             body: JSON.stringify({ serviceName }),
         })
@@ -183,13 +285,5 @@ const deleteHandler = async () => {
 const cleanup = () => {
     serviceName = null
     store.clear()
-    removeUrl()
-}
-
-function generateClientId() {
-    const uint32 = window.crypto.getRandomValues(
-        new Uint32Array(1)
-    )[0];
-
-    return uint32.toString(16);
+    urlReport.hide()
 }

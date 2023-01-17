@@ -1,0 +1,47 @@
+main {
+    font-family: -apple-system, system-ui, 'Segoe UI', Helvetica, Arial, sans-serif,
+        'Apple Color Emoji', 'Segoe UI Emoji';
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    min-height: 100vh;
+}
+.content {
+    display: flex;
+    flex-direction: column;
+    /* justify-content: center; */
+}
+.button {
+    padding: 3em;
+    margin: auto;
+    margin-bottom: 1em;
+    width: 50%;
+    font-size: 200%;
+    /* font-weight: 900; */
+    /* font-family: -apple-system, system-ui, 'Segoe UI', Helvetica, Arial, sans-serif, */
+    /* 'Apple Color Emoji', 'Segoe UI Emoji'; */
+    border-radius: 1em;
+}
+.button:disabled {
+    opacity: 0.6 !important;
+    cursor: default;
+    pointer-events: none;
+}
+.button.create {
+    color: white;
+    background-color: green;
+}
+.button.delete {
+    color: white;
+    background-color: red;
+}
+.hide {
+    display: none;
+}
+ul#progress-report {
+    list-style-type: none;
+    line-height: 3em;
+}
+ul#progress-report span {
+    vertical-align: top;
+}

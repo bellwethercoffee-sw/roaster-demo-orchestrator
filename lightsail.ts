@@ -5,6 +5,7 @@ import {
     DeleteContainerServiceCommand,
     GetContainerServicesCommand,
     GetContainerServicesCommandOutput,
+    Tag,
 } from '@aws-sdk/client-lightsail';
 import {
     GetRepositoryPolicyCommand,
@@ -23,17 +24,22 @@ export const createServiceName = (clientId: string): string => {
     return `${serviceNamePrefix}-${clientId}`;
 };
 
-export const createInstance = async (identifier: string) => {
+export const createInstance = async (identifier: string, additionalTags?: Map<string, string>) => {
     const lightsail = await createLightsailClient();
-
     const serviceName = createServiceName(identifier);
+
+    const tags: Tag[] = [{ key: 'orchestrator' }];
+    additionalTags?.forEach((value, key) => {
+        tags.push({ key, value });
+    });
+
     try {
         const data = await lightsail.send(
             new CreateContainerServiceCommand({
                 serviceName,
                 scale: 1,
                 power: 'micro',
-                tags: [{ key: 'creator', value: 'orchestrator' }],
+                tags: tags,
                 privateRegistryAccess: {
                     ecrImagePullerRole: {
                         isActive: true,
