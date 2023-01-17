@@ -1,3 +1,5 @@
+import fetch from './fetch.js'
+
 let clientId
 let serviceName
 

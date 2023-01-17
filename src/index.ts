@@ -9,7 +9,7 @@ import { eventsHandler } from './handlers/sse';
 import { createInstance, createServiceName, deleteInstance, queryInstance } from './lightsail';
 import { logger } from './logger';
 import { Monitor } from './monitor';
-import authentication from './src/middlewares/authentication';
+import authentication from './middlewares/authentication';
 
 const app: Express = express();
 
