@@ -4,47 +4,51 @@
         <meta charset="UTF-8" />
         <meta http-equiv="X-UA-Compatible" content="IE=edge" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-        <title>Demo App Orchestrator</title>
+        <title>Roaster App Orchestrator</title>
         <link rel="icon" href="data:," />
-        <script src="scripts/index.js" defer></script>
-        <style>
-            main {
-                font-family: -apple-system, system-ui, 'Segoe UI', Helvetica, Arial, sans-serif,
-                    'Apple Color Emoji', 'Segoe UI Emoji';
-                display: flex;
-                flex-direction: column;
-                justify-content: center;
-                min-height: 100vh;
-            }
-            .content {
-                display: flex;
-                flex-direction: column;
-                /* justify-content: center; */
-            }
-            .button {
-                padding: 3em;
-                margin: auto;
-                margin-bottom: 1em;
-                width: 50%;
-                font-size: 200%;
-                /* font-weight: 900; */
-                /* font-family: -apple-system, system-ui, 'Segoe UI', Helvetica, Arial, sans-serif, */
-                /* 'Apple Color Emoji', 'Segoe UI Emoji'; */
-                border-radius: 1em;
-            }
-            .button.create {
-                color: white;
-                background-color: green;
-            }
-            .button.delete {
-                color: white;
-                background-color: red;
-            }
-        </style>
+        <!-- <script type="module" src="scripts/fetch.js"></script> -->
+        <script type="module" src="scripts/index.js" defer></script>
+        <link rel="stylesheet" href="styles/main.css" />
     </head>
     <body>
         <main>
             <div class="content">
+                <h1 style="text-align: center">On-demand Provisioning</h1>
+
+                <ul id="progress-report" class="hide">
+                    <li id="progress-report-service" class="hide">
+                        <img
+                            src="assets/images/icons8-loading-48.png"
+                            alt=""
+                            style="height: 48px"
+                        />
+                        <span>Creating service...</span>
+                    </li>
+                    <li id="progress-report-deployment" class="hide">
+                        <img
+                            src="assets/images/spinner-solid-svgrepo-com.svg"
+                            alt=""
+                            style="height: 48px"
+                        />
+                        <span>Deploying application to the service</span>
+                    </li>
+                </ul>
+
+                <div id="url-report" class="hide" style="text-align: center">
+                    <h2>URLs</h2>
+
+                    <h3>App</h3>
+                    <div
+                        id="url-report-app"
+                        style="text-align: center; margin-bottom: 1em; font-size: 120%"
+                    ></div>
+
+                    <h3>Simulate User Actions</h3>
+                    <div
+                        id="url-report-user-actions"
+                        style="text-align: center; margin-bottom: 1em; font-size: 120%"
+                    ></div>
+                </div>
                 <div id="url" style="text-align: center; margin-bottom: 1em; font-size: 120%"></div>
                 <button id="btn-create" class="button create">Create</button>
                 <button id="btn-delete" class="button delete">Destroy</button>

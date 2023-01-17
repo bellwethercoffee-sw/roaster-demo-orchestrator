@@ -74,6 +74,7 @@ export class AutoDestroyerWatcher extends AbstractWatcher {
                 );
                 deleteInstance(serviceName);
                 list.push(serviceName);
+                eventBus.emit(EventName.ServiceDeleted, serviceName);
             } catch (err: any) {
                 logger.error(err.message);
             }
