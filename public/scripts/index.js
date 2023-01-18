@@ -18,6 +18,10 @@ const clientSpecificEvents = [
     EVENT_SERVICE_DELETED,
 ]
 
+const SUCCESS_ICON = 'assets/images/correct-success-tick-svgrepo-com.svg'
+const FAIL_ICON = 'assets/images/wrong-cancel-close-svgrepo-com.svg'
+const SPINNER_ICON = 'assets/images/spinner-solid-svgrepo-com.svg'
+
 class ClientIdHelper {
     static KEY = 'clientId'
 
@@ -44,10 +48,6 @@ class ClientIdHelper {
 }
 
 class ProgressReport {
-    SUCCESS_ICON = 'assets/images/correct-success-tick-svgrepo-com.svg'
-    FAIL_ICON = 'assets/images/wrong-cancel-close-svgrepo-com.svg'
-    SPINNER_ICON = 'assets/images/spinner-solid-svgrepo-com.svg'
-
     IMAGE = 0
     SPAN = 1
 
@@ -89,28 +89,73 @@ class ProgressReport {
     startServiceCreation() {
         this.show()
         this.#showElement(this.serviceElem)
-        this.serviceElem.children[this.IMAGE].src = this.SPINNER_ICON
+        this.serviceElem.children[this.IMAGE].src = SPINNER_ICON
     }
 
     serviceCreated(successful = true) {
         this.show()
         this.#showElement(this.serviceElem)
-        this.serviceElem.children[this.IMAGE].src = successful ? this.SUCCESS_ICON : this.FAIL_ICON
+        this.serviceElem.children[this.IMAGE].src = successful ? SUCCESS_ICON : FAIL_ICON
     }
 
     deploymentStarted() {
         this.show()
         this.#showElement(this.deploymentElem)
-        this.deploymentElem.children[this.IMAGE].src = this.SPINNER_ICON
+        this.deploymentElem.children[this.IMAGE].src = SPINNER_ICON
     }
 
     deploymentComplete(successful = true) {
         this.show()
         this.#showElement(this.deploymentElem)
 
-        this.deploymentElem.children[this.IMAGE].src = successful ? this.SUCCESS_ICON : this.FAIL_ICON
+        this.deploymentElem.children[this.IMAGE].src = successful ? SUCCESS_ICON : FAIL_ICON
     }
 
+}
+
+class ServiceCheckReport {
+    IMAGE = 0
+    SPAN = 1
+
+    constructor() {
+        this.elem = document.querySelector('#service-check')
+    }
+
+    show() {
+        this.#showElement(this.elem)
+    }
+
+    hide() {
+        setTimeout(() => {
+            this.#hideElement(this.elem)
+        }, 1000 * 60)
+    }
+
+    #hideElement(elem) {
+        elem.classList.add('hide')
+    }
+
+    #showElement(elem) {
+        elem.classList.remove('hide')
+    }
+
+    start() {
+        this.show()
+        this.elem.children[this.IMAGE].src = SPINNER_ICON
+        this.elem.children[this.SPAN].textContent = 'Checking if you have an active instance we can immediately serve...'
+    }
+
+    end(serviceFound) {
+        if (serviceFound) {
+            this.elem.children[this.IMAGE].src = SUCCESS_ICON
+            this.elem.children[this.SPAN].textContent = 'Instance found. Use this URLs below to experience the app'
+        } else {
+            this.elem.children[this.IMAGE].src = FAIL_ICON
+            this.elem.children[this.SPAN].textContent = 'Sorry, no active instance found for you. Kindly click on the Create button'
+        }
+
+        this.hide()
+    }
 }
 
 class URLReport {
@@ -133,16 +178,19 @@ class URLReport {
 const store = new ClientIdHelper()
 const progressReport = new ProgressReport()
 const urlReport = new URLReport()
+const serviceCheckReport = new ServiceCheckReport()
 
 const init = async () => {
-    // progressReport = new ProgressReport();
 
     clientId = store.read();
 
     if (clientId) {
+        serviceCheckReport.start()
         const service = await findService(clientId)
 
+        serviceCheckReport.end(!!service)
         if (service) {
+
             serviceName = service.containerServiceName;
             urlReport.show(service.url)
         }
@@ -237,7 +285,7 @@ const findService = async (clientId) => {
 const createHandler = async () => {
     console.log('Creating... for', clientId)
     if (!clientId) {
-        console.info(`Sorry, you cannot destroy what you have not created: ${clientId}`)
+        console.info(`Sorry, you cannot create a new instance once there is no client ID generated for you`)
         return
     }
 
@@ -276,9 +324,8 @@ const deleteHandler = async () => {
 
         const data = await response.json()
         console.debug(data)
-        cleanup()
 
-        alert('Destroying the created instance')
+        alert(`Destroyed the created instance ${serviceName}`)
     } catch (err) {
         alert(`Destroing the service ${serviceName} failed. Reason: ${err.message}`)
     }

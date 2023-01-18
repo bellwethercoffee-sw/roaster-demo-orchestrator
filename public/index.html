@@ -15,6 +15,15 @@
             <div class="content">
                 <h1 style="text-align: center">On-demand Provisioning</h1>
 
+                <div id="service-check" class="hide" style="margin-bottom: 1em">
+                    <img
+                        src="assets/images/spinner-solid-svgrepo-com.svg"
+                        alt=""
+                        style="height: 48px"
+                    />
+                    <span></span>
+                </div>
+
                 <ul id="progress-report" class="hide">
                     <li id="progress-report-service" class="hide">
                         <img
@@ -49,7 +58,8 @@
                         style="text-align: center; margin-bottom: 1em; font-size: 120%"
                     ></div>
                 </div>
-                <div id="url" style="text-align: center; margin-bottom: 1em; font-size: 120%"></div>
+
+                <!-- <div id="url" style="text-align: center; margin-bottom: 1em; font-size: 120%"></div> -->
                 <button id="btn-create" class="button create">Create</button>
                 <button id="btn-delete" class="button delete">Destroy</button>
             </div>
