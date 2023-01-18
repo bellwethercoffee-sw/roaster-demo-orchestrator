@@ -4,7 +4,7 @@ dotenv.config();
 import express, { Express, Request, Response } from 'express';
 import path from 'path';
 
-import { AUTH_APP_CLIENT_ID, AUTH_APP_CLIENT_SECRET, AUTH_URL, PORT } from './config';
+import { OAUTH_URL, OAUTH_CLIENT_ID, OAUTH_CLIENT_SECRET, PORT } from './config';
 import { eventsHandler } from './handlers/sse';
 import { createInstance, createServiceName, deleteInstance, queryInstance } from './lightsail';
 import { logger } from './logger';
@@ -12,21 +12,22 @@ import { Monitor } from './monitor';
 import authentication from './middlewares/authentication';
 
 const app: Express = express();
-
+let redirectUri: string;
 app.use(express.json());
 
 app.get('/', async (req: Request, res: Response) => {
     const authCode = <string>req.query.code;
-    const redirectUri = 'http://localhost:7001/';
+
+    if (!redirectUri) redirectUri = `${req.protocol}://${req.get('host')}${req.originalUrl}`;
+    const loginUrl = `${OAUTH_URL}/login?redirect_uri=${redirectUri}&client_id=${OAUTH_CLIENT_ID}&scope=openid+profile+email&response_type=code`;
+
     if (!authCode) {
-        res.redirect(
-            `${AUTH_URL}/login?redirect_uri=${redirectUri}&client_id=${AUTH_APP_CLIENT_ID}&scope=openid+profile+email&response_type=code`
-        );
+        res.redirect(loginUrl);
     } else {
         try {
             const payload = {
                 grant_type: 'authorization_code',
-                client_id: AUTH_APP_CLIENT_ID,
+                client_id: OAUTH_CLIENT_ID,
                 code: authCode,
                 redirect_uri: redirectUri,
             };
@@ -34,14 +35,14 @@ app.get('/', async (req: Request, res: Response) => {
                 'Content-type': 'application/x-www-form-urlencoded',
             };
 
-            const authenticateClientApp = !!AUTH_APP_CLIENT_ID && !!AUTH_APP_CLIENT_SECRET;
+            const authenticateClientApp = !!OAUTH_CLIENT_ID && !!OAUTH_CLIENT_SECRET;
 
             if (authenticateClientApp) {
-                const clientAuth = `${AUTH_APP_CLIENT_ID}:${AUTH_APP_CLIENT_SECRET}`;
+                const clientAuth = `${OAUTH_CLIENT_ID}:${OAUTH_CLIENT_SECRET}`;
                 headers.Authorization = `Basic ${Buffer.from(clientAuth).toString('base64')}`;
             }
 
-            const response = await fetch(`${AUTH_URL}/oauth2/token`, {
+            const response = await fetch(`${OAUTH_URL}/oauth2/token`, {
                 headers,
                 method: 'POST',
                 body: new URLSearchParams(payload).toString(),
@@ -51,9 +52,8 @@ app.get('/', async (req: Request, res: Response) => {
             const tokens = await response.json();
 
             if (tokens.error) {
-                res.redirect(
-                    `${AUTH_URL}/login?redirect_uri=${redirectUri}&client_id=${AUTH_APP_CLIENT_ID}&scope=openid+profile+email&response_type=code`
-                );
+                res.redirect(loginUrl);
+
                 return;
             } else {
                 res.cookie('accessToken', tokens?.access_token);
@@ -66,9 +66,9 @@ app.get('/', async (req: Request, res: Response) => {
             logger.error(error?.message);
             logger.error(error);
             logger.error('Redirect...');
-            res.redirect(
-                `${AUTH_URL}/login?redirect_uri=${redirectUri}&client_id=${AUTH_APP_CLIENT_ID}&scope=openid+profile+email&response_type=code`
-            );
+
+            res.redirect(loginUrl);
+
             return;
         }
 
@@ -85,21 +85,21 @@ app.post('/refresh-token', async (req: Request, res: Response) => {
     try {
         const payload = {
             grant_type: 'refresh_token',
-            client_id: AUTH_APP_CLIENT_ID,
+            client_id: OAUTH_CLIENT_ID,
             refresh_token: refreshToken,
         };
         const headers: any = {
             'Content-type': 'application/x-www-form-urlencoded',
         };
 
-        const authenticateClientApp = !!AUTH_APP_CLIENT_ID && !!AUTH_APP_CLIENT_SECRET;
+        const authenticateClientApp = !!OAUTH_CLIENT_ID && !!OAUTH_CLIENT_SECRET;
 
         if (authenticateClientApp) {
-            const clientAuth = `${AUTH_APP_CLIENT_ID}:${AUTH_APP_CLIENT_SECRET}`;
+            const clientAuth = `${OAUTH_CLIENT_ID}:${OAUTH_CLIENT_SECRET}`;
             headers.Authorization = `Basic ${Buffer.from(clientAuth).toString('base64')}`;
         }
 
-        const response = await fetch(`${AUTH_URL}/oauth2/token`, {
+        const response = await fetch(`${OAUTH_URL}/oauth2/token`, {
             headers,
             method: 'POST',
             body: new URLSearchParams(payload).toString(),
