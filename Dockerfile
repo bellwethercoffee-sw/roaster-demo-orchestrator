@@ -18,4 +18,4 @@ WORKDIR /usr/app
 COPY --from=ts-remover /usr/app ./
 USER 1000
 EXPOSE 3000/tcp
-CMD ["node", "index.js"]
+CMD ["node", "dist/index.js"]
