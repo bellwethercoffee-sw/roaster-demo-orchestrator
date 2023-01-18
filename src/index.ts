@@ -150,6 +150,10 @@ app.delete('/api/instance', async (req: Request, res: Response) => {
     res.json({ data: await deleteInstance(req.body.serviceName) });
 });
 
+app.get('/health', (req: Request, res: Response) => {
+    res.json({ status: 'UP' });
+});
+
 new Monitor();
 
 app.listen(PORT, () => {
