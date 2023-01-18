@@ -19,6 +19,7 @@ app.get('/', async (req: Request, res: Response) => {
     const authCode = <string>req.query.code;
 
     if (!redirectUri) redirectUri = `${req.protocol}://${req.get('host')}${req.originalUrl}`;
+    logger.info(`OAuth redirect URI: ${redirectUri}`);
     const loginUrl = `${OAUTH_URL}/login?redirect_uri=${redirectUri}&client_id=${OAUTH_CLIENT_ID}&scope=openid+profile+email&response_type=code`;
 
     if (!authCode) {
