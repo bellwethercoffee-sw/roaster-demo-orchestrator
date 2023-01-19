@@ -11,6 +11,8 @@ const AUTO_DESTROY_INACTIVITY_THRESHOLD_MIN = env.AUTO_DESTROY_INACTIVITY_THRESH
 const OAUTH_URL = env.OAUTH_URL || 'https://auth.eng.bellwether.link';
 const OAUTH_CLIENT_ID = env.OAUTH_CLIENT_ID || 'vkpruk2fpkbg15a750qlb5ve5';
 const OAUTH_CLIENT_SECRET = env.OAUTH_CLIENT_SECRET;
+const OAUTH_REDIRECT_URI =
+    env.OAUTH_REDIRECT_URI || 'https://roaster-app-web-orchestrator.eng.bellwether.link/';
 
 export {
     AWS_REGION,
@@ -22,4 +24,5 @@ export {
     OAUTH_URL,
     OAUTH_CLIENT_ID,
     OAUTH_CLIENT_SECRET,
+    OAUTH_REDIRECT_URI,
 };

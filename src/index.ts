@@ -4,7 +4,13 @@ dotenv.config();
 import express, { Express, Request, Response } from 'express';
 import path from 'path';
 
-import { OAUTH_URL, OAUTH_CLIENT_ID, OAUTH_CLIENT_SECRET, PORT } from './config';
+import {
+    OAUTH_URL,
+    OAUTH_CLIENT_ID,
+    OAUTH_CLIENT_SECRET,
+    PORT,
+    OAUTH_REDIRECT_URI,
+} from './config';
 import { eventsHandler } from './handlers/sse';
 import { createInstance, createServiceName, deleteInstance, queryInstance } from './lightsail';
 import { logger } from './logger';
@@ -15,10 +21,22 @@ const app: Express = express();
 let redirectUri: string;
 app.use(express.json());
 
+const getRedirectUri = (req: Request): string => {
+    if (!redirectUri) {
+        // NOTE: Ideally the dynamic URI should be enough, but it appears the load balancer isn't correct forwarding the protocol as it reports http instead of https leading to a mismatch in the uri error
+        redirectUri =
+            req.hostname === 'localhost'
+                ? `${req.protocol}://${req.get('host')}${req.originalUrl}`
+                : OAUTH_REDIRECT_URI;
+    }
+
+    return redirectUri;
+};
+
 app.get('/', async (req: Request, res: Response) => {
     const authCode = <string>req.query.code;
 
-    if (!redirectUri) redirectUri = `${req.protocol}://${req.get('host')}${req.originalUrl}`;
+    const redirectUri = getRedirectUri(req);
     logger.info(`OAuth redirect URI: ${redirectUri}`);
     const loginUrl = `${OAUTH_URL}/login?redirect_uri=${redirectUri}&client_id=${OAUTH_CLIENT_ID}&scope=openid+profile+email&response_type=code`;
 
