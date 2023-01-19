@@ -26,7 +26,7 @@ const getRedirectUri = (req: Request): string => {
         // NOTE: Ideally the dynamic URI should be enough, but it appears the load balancer isn't correct forwarding the protocol as it reports http instead of https leading to a mismatch in the uri error
         redirectUri =
             req.hostname === 'localhost'
-                ? `${req.protocol}://${req.get('host')}${req.originalUrl}`
+                ? `${req.protocol}://${req.get('host')}${req.originalUrl.split('?')[0]}`
                 : OAUTH_REDIRECT_URI;
     }
 

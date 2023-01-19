@@ -16,7 +16,7 @@ import { createECRClient, createLightsailClient } from './config/aws';
 import { eventBus, EventName } from './event-bus';
 import { logger } from './logger';
 
-const serviceNamePrefix = 'roaster-app-demo';
+const serviceNamePrefix = 'roaster-app';
 const image = '025870537499.dkr.ecr.us-east-1.amazonaws.com/roaster-app:web-demo';
 const servicePort = '8000';
 
@@ -165,7 +165,8 @@ export const attachRepositoryPolicy = async (serviceName: string, principalArn: 
     try {
         const o = await getRepositoryPolicy();
 
-        const policy = JSON.parse(o.policyText || '');
+        const policy = sanitizePolicy(<string>o.policyText);
+
         policy.Statement.push({
             Sid: `AllowLightsailPull-${serviceName}`,
             Effect: 'Allow',
@@ -194,11 +195,21 @@ export const attachRepositoryPolicy = async (serviceName: string, principalArn: 
     }
 };
 
+const sanitizePolicy = (policyText: string): any => {
+    const policy = JSON.parse(policyText);
+    const ignoreInvalidIAMPredicate = (permission: any) =>
+        (<string>permission?.Principal?.AWS).startsWith('arn:aws:iam');
+
+    policy.Statement = policy.Statement.filter(ignoreInvalidIAMPredicate);
+
+    return policy;
+};
+
 export const removeRepositoryPolicy = async (serviceName: string) => {
     try {
         const o = await getRepositoryPolicy();
 
-        const policy = JSON.parse(o.policyText || '');
+        const policy = sanitizePolicy(<string>o.policyText);
         policy.Statement = policy.Statement.filter(
             (permission: any) => !(<string>permission.Sid).endsWith(serviceName)
         );
