@@ -5,7 +5,7 @@ import { logger } from '../logger';
 import AbstractWatcher from './AbstractWatcher';
 
 export class ServiceReadyWatcher extends AbstractWatcher {
-    readonly CHECK_INTERVAL = 1000 * 45;
+    readonly CHECK_INTERVAL = 1000 * 20;
 
     public constructor() {
         super();
