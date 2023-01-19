@@ -21,6 +21,7 @@ main {
     /* font-family: -apple-system, system-ui, 'Segoe UI', Helvetica, Arial, sans-serif, */
     /* 'Apple Color Emoji', 'Segoe UI Emoji'; */
     border-radius: 1em;
+    cursor: pointer;
 }
 .button:disabled {
     opacity: 0.6 !important;
