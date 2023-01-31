@@ -2,6 +2,7 @@ import fetch from 'cross-fetch';
 import dotenv from 'dotenv';
 dotenv.config();
 import express, { Express, Request, Response } from 'express';
+import cookieParser from 'cookie-parser';
 import path from 'path';
 
 import {
@@ -20,6 +21,7 @@ import authentication from './middlewares/authentication';
 const app: Express = express();
 let redirectUri: string;
 app.use(express.json());
+app.use(cookieParser());
 
 const getRedirectUri = (req: Request): string => {
     if (!redirectUri) {
@@ -33,9 +35,8 @@ const getRedirectUri = (req: Request): string => {
     return redirectUri;
 };
 
-app.get('/', async (req: Request, res: Response) => {
+const login = async (req: Request, res: Response) => {
     const authCode = <string>req.query.code;
-
     const redirectUri = getRedirectUri(req);
     logger.info(`OAuth redirect URI: ${redirectUri}`);
     const loginUrl = `${OAUTH_URL}/login?redirect_uri=${redirectUri}&client_id=${OAUTH_CLIENT_ID}&scope=openid+profile+email&response_type=code`;
@@ -53,46 +54,48 @@ app.get('/', async (req: Request, res: Response) => {
             const headers: any = {
                 'Content-type': 'application/x-www-form-urlencoded',
             };
-
             const authenticateClientApp = !!OAUTH_CLIENT_ID && !!OAUTH_CLIENT_SECRET;
-
             if (authenticateClientApp) {
                 const clientAuth = `${OAUTH_CLIENT_ID}:${OAUTH_CLIENT_SECRET}`;
                 headers.Authorization = `Basic ${Buffer.from(clientAuth).toString('base64')}`;
             }
-
             const response = await fetch(`${OAUTH_URL}/oauth2/token`, {
                 headers,
                 method: 'POST',
                 body: new URLSearchParams(payload).toString(),
             });
-
             // id_token, refresh_token
             const tokens = await response.json();
-
             if (tokens.error) {
                 res.redirect(loginUrl);
-
                 return;
             } else {
                 res.cookie('accessToken', tokens?.access_token);
                 res.cookie('idToken', tokens?.id_token);
                 res.cookie('refreshToken', tokens?.refresh_token);
-
                 logger.debug(tokens);
             }
         } catch (error: any) {
             logger.error(error?.message);
             logger.error(error);
             logger.error('Redirect...');
-
             res.redirect(loginUrl);
-
             return;
         }
-
         res.sendFile(path.resolve(__dirname, '../public', 'index.html'));
     }
+};
+const logout = async (req: Request, res: Response) => {
+    const redirectUri = getRedirectUri(req);
+    logger.info(`OAuth redirect URI: ${redirectUri}`);
+    const logoutUrl = `${OAUTH_URL}/logout?redirect_uri=${redirectUri}&client_id=${OAUTH_CLIENT_ID}&scope=openid+profile+email+aws.cognito.signin.user.admin&response_type=code`;
+
+    res.redirect(logoutUrl);
+};
+
+app.get('/', async (req: Request, res: Response) => {
+    if (req.query['action'] === 'logout') logout(req, res);
+    else login(req, res);
 });
 app.use(express.static('public'));
 app.get('/events', eventsHandler);
