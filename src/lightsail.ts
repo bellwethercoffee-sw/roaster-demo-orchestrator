@@ -118,6 +118,27 @@ export const queryInstance = async (
     }
 };
 
+const findUserInstance = (list: ContainerService[], email: string) => {
+    return list?.find((containerService) => {
+        return !!containerService.tags?.find((t: any) => {
+            return t.key === 'email' && t.value === email;
+        });
+    });
+};
+
+export const queryInstanceV2 = async (email: string): Promise<ContainerService | null> => {
+    try {
+        const lightsail = await createLightsailClient();
+        const data = await lightsail.send(new GetContainerServicesCommand({}));
+
+        const containerServices = <ContainerService[]>data.containerServices;
+        return findUserInstance(containerServices, email) || null;
+    } catch (error: any) {
+        // console.error(error.$metadata);
+        throw error;
+    }
+};
+
 export const deleteInstance = async (serviceName: string) => {
     // const serviceName = `${serviceNamePrefix}-${identifier}`;
 

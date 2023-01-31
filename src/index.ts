@@ -13,7 +13,13 @@ import {
     OAUTH_REDIRECT_URI,
 } from './config';
 import { eventsHandler } from './handlers/sse';
-import { createInstance, createServiceName, deleteInstance, queryInstance } from './lightsail';
+import {
+    createInstance,
+    createServiceName,
+    deleteInstance,
+    queryInstance,
+    queryInstanceV2,
+} from './lightsail';
 import { logger } from './logger';
 import { Monitor } from './monitor';
 import authentication from './middlewares/authentication';
@@ -148,22 +154,26 @@ app.post('/refresh-token', async (req: Request, res: Response) => {
 
 app.use('/api', authentication);
 app.get('/api/instance', async (req: Request, res: Response) => {
-    const clientId = <string>req.query.clientId; // FIXME: Add validation
-    const serviceName = createServiceName(clientId);
+    const user = req.user;
 
     try {
-        const data = await queryInstance(serviceName);
-        res.json({ ...data.containerServices![0] });
+        const service = await queryInstanceV2(user?.email);
+
+        if (service) res.json({ ...service });
+        else res.status(404).json({ message: `Service not found for ${user?.email}` });
     } catch (error: any) {
         const status = error?.$metadata?.httpStatusCode;
-        res.status(status).json({ message: error.message, details: { serviceName } });
+        res.status(status).json({ message: error.message });
     }
 });
 
 app.post('/api/instance', async (req: Request, res: Response) => {
-    const { clientId } = req.body; // FIXME: Add validation
+    const { clientId } = req.body;
     const user = req.user;
-    const tags: Map<string, string> = new Map([['user', user?.name || user?.email]]);
+    const tags: Map<string, string> = new Map([
+        ['user', user?.name || user?.email],
+        ['email', user?.email],
+    ]);
 
     res.json({ data: await createInstance(clientId, tags) });
 });

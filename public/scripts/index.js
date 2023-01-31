@@ -210,23 +210,22 @@ const init = async () => {
     configureApp()
     clientId = store.read();
 
-    if (clientId) {
-        serviceCheckReport.start()
-        const service = await findService(clientId)
-
-        serviceCheckReport.end(!!service)
-        if (service) {
-            serviceName = service.containerServiceName;
-            urlReport.show(service.url)
-        } else {
-            if (appConfig.autoCreateInstance) createHandler()
-        }
-    } else {
+    if (!clientId) {
         clientId = ClientIdHelper.generateClientId();
         store.write(clientId)
+    }
 
+    serviceCheckReport.start()
+    const service = await findService()
+
+    serviceCheckReport.end(!!service)
+    if (service) {
+        serviceName = service.containerServiceName;
+        urlReport.show(service.url)
+    } else {
         if (appConfig.autoCreateInstance) createHandler()
     }
+
 
     const evtSource = new EventSource(`/events?clientId=${clientId}`);
 
@@ -291,11 +290,11 @@ window.addEventListener('load', () => {
 });
 
 
-const findService = async (clientId) => {
-    console.debug(`Find service with identifier ${clientId}`)
+const findService = async () => {
+    console.debug(`Finding available service`)
 
     try {
-        const response = await fetch(`/api/instance?clientId=${clientId}`)
+        const response = await fetch(`/api/instance`)
 
         const data = await response.json()
 
