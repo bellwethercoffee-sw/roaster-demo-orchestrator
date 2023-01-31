@@ -151,7 +151,13 @@ class ServiceCheckReport {
             this.elem.children[this.SPAN].textContent = 'Instance found. Use this URLs below to experience the app'
         } else {
             this.elem.children[this.IMAGE].src = FAIL_ICON
-            this.elem.children[this.SPAN].textContent = 'Sorry, no active instance found for you. Kindly click on the Create button'
+
+            let message = 'Sorry, no active instance found for you. '
+            message += appConfig.autoCreateInstance ?
+                'Creating an instance for you. Kindly wait up to 7 minutes' :
+                'Kindly click on the Create button.'
+
+            this.elem.children[this.SPAN].textContent = message
         }
 
         this.hide()
@@ -165,9 +171,14 @@ class URLReport {
 
     show(url) {
         this.elem.classList.remove('hide')
+        const userActionsUrl = `${url}actions.html`
 
         document.querySelector('#url-report-app').innerHTML = `<a href="${url}" target="_blank">${url}</a>`
-        document.querySelector('#url-report-user-actions').innerHTML = `<a href="${url}actions.html" target="_blank">${url}actions.html</a>`
+        document.querySelector('#url-report-user-actions').innerHTML = `<a href="${userActionsUrl}" target="_blank">${userActionsUrl}</a>`
+
+        // window.open(url, '_blank')
+        window.open(userActionsUrl, '_blank')
+        document.location.href = url
     }
 
     hide() {
@@ -179,9 +190,24 @@ const store = new ClientIdHelper()
 const progressReport = new ProgressReport()
 const urlReport = new URLReport()
 const serviceCheckReport = new ServiceCheckReport()
+const appConfig = {
+    autoCreateInstance: true,
+    showActionButtons: false,
+}
+
+
+const configureApp = () => {
+    const debugHosts = ['localhost', '127.0.0.1']
+    const inDebugMode = debugHosts.includes(document.location.hostname)
+
+    appConfig.autoCreateInstance = !inDebugMode
+    appConfig.showActionButtons = inDebugMode
+
+    if (appConfig.showActionButtons) document.querySelector('#user-actions').classList.remove('hide')
+}
 
 const init = async () => {
-
+    configureApp()
     clientId = store.read();
 
     if (clientId) {
@@ -190,13 +216,16 @@ const init = async () => {
 
         serviceCheckReport.end(!!service)
         if (service) {
-
             serviceName = service.containerServiceName;
             urlReport.show(service.url)
+        } else {
+            if (appConfig.autoCreateInstance) createHandler()
         }
     } else {
         clientId = ClientIdHelper.generateClientId();
         store.write(clientId)
+
+        if (appConfig.autoCreateInstance) createHandler()
     }
 
     const evtSource = new EventSource(`/events?clientId=${clientId}`);

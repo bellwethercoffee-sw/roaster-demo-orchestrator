@@ -5,6 +5,14 @@ main {
     flex-direction: column;
     justify-content: center;
     min-height: 100vh;
+    margin: auto;
+    /* background-color: red; */
+    width: 840px;
+    /* display: flex; */
+    /* flex-direction: column; */
+    /* justify-content: center; */
+    /* min-height: 100vh; */
+    padding: 1em;
 }
 .content {
     display: flex;
@@ -15,12 +23,12 @@ main {
     padding: 3em;
     margin: auto;
     margin-bottom: 1em;
-    width: 50%;
+    width: 100%;
     font-size: 200%;
     /* font-weight: 900; */
     /* font-family: -apple-system, system-ui, 'Segoe UI', Helvetica, Arial, sans-serif, */
     /* 'Apple Color Emoji', 'Segoe UI Emoji'; */
-    border-radius: 1em;
+    /* border-radius: 1em; */
     cursor: pointer;
 }
 .button:disabled {
@@ -31,6 +39,7 @@ main {
 .button.create {
     color: white;
     background-color: green;
+    border-top-left-radius: 90px;
 }
 .button.delete {
     /* color: white;
@@ -38,6 +47,7 @@ main {
     color: red;
     background-color: white;
     border: 2px solid red;
+    border-bottom-right-radius: 90px;
 }
 .hide {
     display: none;
