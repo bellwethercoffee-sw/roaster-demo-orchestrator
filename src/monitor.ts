@@ -3,8 +3,12 @@ import { ContainerService, ContainerServiceState } from '@aws-sdk/client-lightsa
 import { eventBus, EventName } from './event-bus';
 import { deploy } from './lightsail';
 import { logger } from './logger';
-import { DeploymentRunningWatcher, ServiceReadyWatcher } from './watchers';
-import { AutoDestroyerWatcher } from './watchers/AutoDestroyerWatcher';
+import {
+    AutoDestroyerWatcher,
+    DeploymentRunningWatcher,
+    HotInstanceClaimedWatcher,
+    ServiceReadyWatcher,
+} from './watchers';
 
 export class Monitor {
     public constructor() {
@@ -13,6 +17,7 @@ export class Monitor {
         new AutoDestroyerWatcher();
         new ServiceReadyWatcher();
         new DeploymentRunningWatcher();
+        new HotInstanceClaimedWatcher();
     }
 
     private async serviceReadyHandler(service: ContainerService) {

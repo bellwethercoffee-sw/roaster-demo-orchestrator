@@ -1,6 +1,6 @@
-import fetch from 'cross-fetch';
 import dotenv from 'dotenv';
 dotenv.config();
+import fetch from 'cross-fetch';
 import express, { Express, Request, Response } from 'express';
 import cookieParser from 'cookie-parser';
 import path from 'path';
@@ -11,18 +11,14 @@ import {
     OAUTH_CLIENT_SECRET,
     PORT,
     OAUTH_REDIRECT_URI,
+    TAG_EMAIL_KEY,
 } from './config';
 import { eventsHandler } from './handlers/sse';
-import {
-    createInstance,
-    createServiceName,
-    deleteInstance,
-    queryInstance,
-    queryInstanceV2,
-} from './lightsail';
+import { createInstance, deleteInstance, getUserInstance } from './lightsail';
 import { logger } from './logger';
 import { Monitor } from './monitor';
 import authentication from './middlewares/authentication';
+import { init } from './init';
 
 const app: Express = express();
 let redirectUri: string;
@@ -157,7 +153,7 @@ app.get('/api/instance', async (req: Request, res: Response) => {
     const user = req.user;
 
     try {
-        const service = await queryInstanceV2(user?.email);
+        const service = await getUserInstance(user?.email);
 
         if (service) res.json({ ...service });
         else res.status(404).json({ message: `Service not found for ${user?.email}` });
@@ -170,10 +166,7 @@ app.get('/api/instance', async (req: Request, res: Response) => {
 app.post('/api/instance', async (req: Request, res: Response) => {
     const { clientId } = req.body;
     const user = req.user;
-    const tags: Map<string, string> = new Map([
-        ['user', user?.name || user?.email],
-        ['email', user?.email],
-    ]);
+    const tags: Map<string, string> = new Map([[TAG_EMAIL_KEY, user?.email]]);
 
     res.json({ data: await createInstance(clientId, tags) });
 });
@@ -187,6 +180,7 @@ app.get('/health', (req: Request, res: Response) => {
 });
 
 new Monitor();
+init();
 
 app.listen(PORT, () => {
     logger.info(`⚡️[server]: Server is running at http://localhost:${PORT}`);

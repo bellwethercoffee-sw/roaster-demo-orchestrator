@@ -8,6 +8,8 @@ export enum EventName {
 
     DeploymentStarted = 'DeploymentStarted',
     DeploymentRunning = 'DeploymentRunning',
+
+    HotInstanceClaimed = 'HotInstanceClaimed',
 }
 
 class EventBus extends EventEmitter {}

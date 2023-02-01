@@ -176,9 +176,8 @@ class URLReport {
         document.querySelector('#url-report-app').innerHTML = `<a href="${url}" target="_blank">${url}</a>`
         document.querySelector('#url-report-user-actions').innerHTML = `<a href="${userActionsUrl}" target="_blank">${userActionsUrl}</a>`
 
-        // window.open(url, '_blank')
         window.open(userActionsUrl, '_blank')
-        document.location.href = url
+        window.open(url, '_self')
     }
 
     hide() {
@@ -220,7 +219,12 @@ const init = async () => {
 
     serviceCheckReport.end(!!service)
     if (service) {
+        const CLIENT_ID_POS = 2
         serviceName = service.containerServiceName;
+
+        clientId = serviceName.split('-')[CLIENT_ID_POS] || clientId
+        store.write(clientId)
+
         urlReport.show(service.url)
     } else {
         if (appConfig.autoCreateInstance) createHandler()
