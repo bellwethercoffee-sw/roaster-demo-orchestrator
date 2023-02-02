@@ -37,9 +37,10 @@ export class DeploymentRunningWatcher extends AbstractWatcher {
 
         for (const { serviceName } of this.watchList) {
             try {
-                const response = await queryInstance(serviceName);
+                const service = await queryInstance(serviceName);
 
-                const service = <ContainerService>response?.containerServices![0];
+                if (!service) continue;
+
                 logger.debug(
                     `Monitoring deployment readiness for ${serviceName}. Current state: ${service.state}`
                 );

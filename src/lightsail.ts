@@ -5,7 +5,6 @@ import {
     CreateContainerServiceDeploymentCommand,
     DeleteContainerServiceCommand,
     GetContainerServicesCommand,
-    GetContainerServicesCommandOutput,
     Tag,
     TagResourceCommand,
     UntagResourceCommand,
@@ -103,24 +102,15 @@ export const deploy = async (service: ContainerService) => {
     }
 };
 
-// TODO: Simply return a ContainerService
-export const queryInstance = async (
-    serviceName: string
-): Promise<GetContainerServicesCommandOutput> => {
-    try {
-        const lightsail = await createLightsailClient();
-        const data = await lightsail.send(
-            new GetContainerServicesCommand({
-                serviceName,
-            })
-        );
+export const queryInstance = async (serviceName: string): Promise<ContainerService> => {
+    const lightsail = await createLightsailClient();
+    const list = await lightsail.send(
+        new GetContainerServicesCommand({
+            serviceName,
+        })
+    );
 
-        // console.log(data);
-        return data;
-    } catch (error: any) {
-        // console.error(error.$metadata);
-        throw error;
-    }
+    return list?.containerServices![0];
 };
 
 const findHotInstance = (list: ContainerService[]) => {
@@ -205,7 +195,11 @@ const claimHotInstance = async (containerService: ContainerService, email: strin
             })
         );
 
-        eventBus.emit(EventName.HotInstanceClaimed);
+        eventBus.emit(
+            EventName.HotInstanceClaimed,
+            containerService.containerServiceName,
+            containerService.url
+        );
     } catch (error: any) {
         throw error;
     }

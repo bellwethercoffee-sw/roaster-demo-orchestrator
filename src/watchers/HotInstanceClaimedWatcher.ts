@@ -7,8 +7,8 @@ export class HotInstanceClaimedWatcher extends AbstractWatcher {
     public constructor() {
         super();
 
-        eventBus.on(EventName.HotInstanceClaimed, () => {
-            // logger.info(`New service created ${serviceName}`);
+        eventBus.on(EventName.HotInstanceClaimed, (serviceName: string, url: string) => {
+            eventBus.emit(EventName.DeploymentRunning, serviceName, url);
             this.watch('');
         });
     }

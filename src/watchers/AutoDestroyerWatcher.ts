@@ -26,11 +26,10 @@ export class AutoDestroyerWatcher extends AbstractWatcher {
 
     private async isClaimed(serviceName: string): Promise<boolean> {
         try {
-            const list = await queryInstance(serviceName);
-            const service = <ContainerService>list?.containerServices![0];
+            const service = await queryInstance(serviceName);
 
             return (
-                service.tags?.filter((t: Tag) => {
+                service?.tags?.filter((t: Tag) => {
                     return t.key === TAG_HOT_INSTANCE_KEY;
                 }).length === 0
             );
