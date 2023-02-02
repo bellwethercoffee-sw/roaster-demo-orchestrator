@@ -19,6 +19,7 @@ import { logger } from './logger';
 import { Monitor } from './monitor';
 import authentication from './middlewares/authentication';
 import { init } from './init';
+import scheduleJobs from './jobs/scheduler';
 
 const app: Express = express();
 let redirectUri: string;
@@ -181,6 +182,7 @@ app.get('/health', (req: Request, res: Response) => {
 
 new Monitor();
 init();
+scheduleJobs();
 
 app.listen(PORT, () => {
     logger.info(`⚡️[server]: Server is running at http://localhost:${PORT}`);
