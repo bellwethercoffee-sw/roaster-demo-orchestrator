@@ -14,6 +14,10 @@ const OAUTH_CLIENT_SECRET = env.OAUTH_CLIENT_SECRET;
 const OAUTH_REDIRECT_URI =
     env.OAUTH_REDIRECT_URI || 'https://roaster-app-web-orchestrator.eng.bellwether.link/';
 
+const TAG_HOT_INSTANCE_KEY = 'hot-instance';
+const TAG_ORCHESTRATOR_KEY = 'orchestrator';
+const TAG_EMAIL_KEY = 'email';
+
 export {
     AWS_REGION,
     AWS_ACCESS_KEY_ID,
@@ -25,4 +29,7 @@ export {
     OAUTH_CLIENT_ID,
     OAUTH_CLIENT_SECRET,
     OAUTH_REDIRECT_URI,
+    TAG_EMAIL_KEY,
+    TAG_HOT_INSTANCE_KEY,
+    TAG_ORCHESTRATOR_KEY,
 };

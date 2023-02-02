@@ -1,7 +1,8 @@
+import { ContainerService, Tag } from '@aws-sdk/client-lightsail';
 import fetch from 'cross-fetch';
-import { AUTO_DESTROY_INACTIVITY_THRESHOLD_MIN } from '../config';
+import { AUTO_DESTROY_INACTIVITY_THRESHOLD_MIN, TAG_HOT_INSTANCE_KEY } from '../config';
 import { eventBus, EventName } from '../event-bus';
-import { deleteInstance } from '../lightsail';
+import { deleteInstance, queryInstance } from '../lightsail';
 import { logger } from '../logger';
 import AbstractWatcher from './AbstractWatcher';
 
@@ -23,7 +24,27 @@ export class AutoDestroyerWatcher extends AbstractWatcher {
         });
     }
 
-    public watch({ serviceName, url }: { serviceName: string; url: string }) {
+    private async isClaimed(serviceName: string): Promise<boolean> {
+        try {
+            const service = await queryInstance(serviceName);
+
+            return (
+                service?.tags?.filter((t: Tag) => {
+                    return t.key === TAG_HOT_INSTANCE_KEY;
+                }).length === 0
+            );
+        } catch (error) {
+            return true;
+        }
+    }
+
+    public async watch({ serviceName, url }: { serviceName: string; url: string }) {
+        const isHotInstance = serviceName.includes('hot');
+        if (isHotInstance && !(await this.isClaimed(serviceName))) {
+            logger.info(`Ignoring hot instance ${serviceName} for auto deletion monitoring`);
+            return;
+        }
+
         logger.info(`Adding service ${serviceName} to be monitored for auto deletion`);
 
         this.watchList.push({

@@ -1,11 +1,13 @@
 import {
     ContainerService,
+    ContainerServiceState,
     CreateContainerServiceCommand,
     CreateContainerServiceDeploymentCommand,
     DeleteContainerServiceCommand,
     GetContainerServicesCommand,
-    GetContainerServicesCommandOutput,
     Tag,
+    TagResourceCommand,
+    UntagResourceCommand,
 } from '@aws-sdk/client-lightsail';
 import {
     GetRepositoryPolicyCommand,
@@ -15,6 +17,7 @@ import {
 import { createECRClient, createLightsailClient } from './config/aws';
 import { eventBus, EventName } from './event-bus';
 import { logger } from './logger';
+import { TAG_EMAIL_KEY, TAG_HOT_INSTANCE_KEY, TAG_ORCHESTRATOR_KEY } from './config';
 
 const serviceNamePrefix = 'roaster-app';
 const image = '025870537499.dkr.ecr.us-east-1.amazonaws.com/roaster-app:web-demo';
@@ -28,7 +31,7 @@ export const createInstance = async (identifier: string, additionalTags?: Map<st
     const lightsail = await createLightsailClient();
     const serviceName = createServiceName(identifier);
 
-    const tags: Tag[] = [{ key: 'orchestrator' }];
+    const tags: Tag[] = [{ key: TAG_ORCHESTRATOR_KEY }];
     additionalTags?.forEach((value, key) => {
         tags.push({ key, value });
     });
@@ -99,19 +102,133 @@ export const deploy = async (service: ContainerService) => {
     }
 };
 
-export const queryInstance = async (
-    serviceName: string
-): Promise<GetContainerServicesCommandOutput> => {
+export const queryInstance = async (serviceName: string): Promise<ContainerService> => {
+    const lightsail = await createLightsailClient();
+    const list = await lightsail.send(
+        new GetContainerServicesCommand({
+            serviceName,
+        })
+    );
+
+    return list?.containerServices![0];
+};
+
+const findHotInstance = (list: ContainerService[]) => {
+    return list?.find((containerService) => {
+        return !!containerService.tags?.find((t: Tag) => {
+            return t.key === TAG_HOT_INSTANCE_KEY;
+        });
+    });
+};
+
+const findUserInstance = (list: ContainerService[], email: string) => {
+    return list?.find((containerService) => {
+        return !!containerService.tags?.find((t: Tag) => {
+            return t.key === TAG_EMAIL_KEY && t.value === email;
+        });
+    });
+};
+
+export const queryInstanceV2 = async (email: string): Promise<ContainerService | null> => {
     try {
         const lightsail = await createLightsailClient();
-        const data = await lightsail.send(
-            new GetContainerServicesCommand({
-                serviceName,
+        const data = await lightsail.send(new GetContainerServicesCommand({}));
+
+        const containerServices = <ContainerService[]>data.containerServices;
+        return (
+            findUserInstance(containerServices, email) || findHotInstance(containerServices) || null
+        );
+    } catch (error: any) {
+        // console.error(error.$metadata);
+        throw error;
+    }
+};
+
+export const getUserInstance = async (email: string): Promise<ContainerService | null> => {
+    try {
+        const lightsail = await createLightsailClient();
+        const data = await lightsail.send(new GetContainerServicesCommand({}));
+
+        const containerServices = <ContainerService[]>data.containerServices;
+
+        const containerService =
+            findUserInstance(containerServices, email) ||
+            findHotInstance(containerServices) ||
+            null;
+
+        const hotInstanceTag = containerService?.tags?.find((t: Tag) => {
+            return t.key === TAG_HOT_INSTANCE_KEY;
+        });
+
+        if (hotInstanceTag && containerService?.state === ContainerServiceState.RUNNING) {
+            claimHotInstance(containerService, email);
+            eventBus.emit(
+                EventName.DeploymentRunning,
+                containerService.containerServiceName,
+                containerService.url
+            );
+        }
+
+        return containerService;
+    } catch (error: any) {
+        // console.error(error.$metadata);
+        throw error;
+    }
+};
+
+const claimHotInstance = async (containerService: ContainerService, email: string) => {
+    try {
+        const lightsail = await createLightsailClient();
+        await lightsail.send(
+            new UntagResourceCommand({
+                resourceArn: containerService.arn,
+                resourceName: containerService.containerServiceName,
+                tagKeys: [TAG_HOT_INSTANCE_KEY],
             })
         );
 
-        // console.log(data);
-        return data;
+        await lightsail.send(
+            new TagResourceCommand({
+                resourceArn: containerService.arn,
+                resourceName: containerService.containerServiceName,
+                tags: [{ key: TAG_EMAIL_KEY, value: email }],
+            })
+        );
+
+        eventBus.emit(
+            EventName.HotInstanceClaimed,
+            containerService.containerServiceName,
+            containerService.url
+        );
+    } catch (error: any) {
+        throw error;
+    }
+};
+
+export const queryHotInstance = async (): Promise<ContainerService | null> => {
+    try {
+        const lightsail = await createLightsailClient();
+        const data = await lightsail.send(new GetContainerServicesCommand({}));
+
+        const containerServices = <ContainerService[]>data.containerServices;
+        return findHotInstance(containerServices) || null;
+    } catch (error: any) {
+        throw error;
+    }
+};
+
+export const findManagedInstances = async (): Promise<ContainerService[]> => {
+    try {
+        const lightsail = await createLightsailClient();
+        const data = await lightsail.send(new GetContainerServicesCommand({}));
+
+        const containerServices = <ContainerService[]>data.containerServices;
+
+        return containerServices?.filter((containerService) => {
+            return !!containerService.tags?.find((t: Tag) => {
+                return t.key === TAG_ORCHESTRATOR_KEY;
+            });
+        });
     } catch (error: any) {
         // console.error(error.$metadata);
         throw error;
@@ -184,10 +301,6 @@ export const attachRepositoryPolicy = async (serviceName: string, principalArn: 
             })
         );
 
-        // console.log(response);
-        // const policy = JSON.parse(response?.policyText || '');
-        // logger.log(policy);
-        // logger.log(JSON.stringify(policy));
         return response;
     } catch (error) {
         logger.error(error);
