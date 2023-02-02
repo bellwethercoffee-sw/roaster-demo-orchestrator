@@ -177,7 +177,7 @@ class URLReport {
         document.querySelector('#url-report-user-actions').innerHTML = `<a href="${userActionsUrl}" target="_blank">${userActionsUrl}</a>`
 
         window.open(userActionsUrl, '_blank')
-        window.open(url, '_self')
+        window.open(url, '_blank')
     }
 
     hide() {
