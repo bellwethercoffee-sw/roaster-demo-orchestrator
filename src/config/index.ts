@@ -20,7 +20,8 @@ const TAG_EMAIL_KEY = 'email';
 
 const ACCOUNT_ID = env.ACCOUNT_ID;
 const SERVICE_DOCKER_IMAGE =
-    env.DOCKER_IMAGE || `${ACCOUNT_ID}.dkr.ecr.us-east-1.amazonaws.com/roaster-app:web-demo`;
+    env.SERVICE_DOCKER_IMAGE ||
+    `${ACCOUNT_ID}.dkr.ecr.us-east-1.amazonaws.com/roaster-app:web-demo`;
 const SERVICE_PORT = env.SERVICE_PORT || '8000';
 const SERVICE_NAME_PREFIX = 'roaster-app';
 
