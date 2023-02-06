@@ -17,14 +17,17 @@ import {
 import { createECRClient, createLightsailClient } from './config/aws';
 import { eventBus, EventName } from './event-bus';
 import { logger } from './logger';
-import { TAG_EMAIL_KEY, TAG_HOT_INSTANCE_KEY, TAG_ORCHESTRATOR_KEY } from './config';
-
-const serviceNamePrefix = 'roaster-app';
-const image = '025870537499.dkr.ecr.us-east-1.amazonaws.com/roaster-app:web-demo';
-const servicePort = '8000';
+import {
+    SERVICE_DOCKER_IMAGE,
+    SERVICE_NAME_PREFIX,
+    SERVICE_PORT,
+    TAG_EMAIL_KEY,
+    TAG_HOT_INSTANCE_KEY,
+    TAG_ORCHESTRATOR_KEY,
+} from './config';
 
 export const createServiceName = (clientId: string): string => {
-    return `${serviceNamePrefix}-${clientId}`;
+    return `${SERVICE_NAME_PREFIX}-${clientId}`;
 };
 
 export const createInstance = async (identifier: string, additionalTags?: Map<string, string>) => {
@@ -74,15 +77,15 @@ export const deploy = async (service: ContainerService) => {
                 serviceName,
                 containers: {
                     [serviceName]: {
-                        image: image,
+                        image: SERVICE_DOCKER_IMAGE,
                         ports: {
-                            [servicePort]: 'HTTP',
+                            [SERVICE_PORT]: 'HTTP',
                         },
                     },
                 },
                 publicEndpoint: {
                     containerName: serviceName,
-                    containerPort: Number(servicePort),
+                    containerPort: Number(SERVICE_PORT),
                     healthCheck: {
                         healthyThreshold: 2,
                         intervalSeconds: 5,

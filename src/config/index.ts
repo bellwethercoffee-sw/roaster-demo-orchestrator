@@ -18,6 +18,12 @@ const TAG_HOT_INSTANCE_KEY = 'hot-instance';
 const TAG_ORCHESTRATOR_KEY = 'orchestrator';
 const TAG_EMAIL_KEY = 'email';
 
+const ACCOUNT_ID = env.ACCOUNT_ID;
+const SERVICE_DOCKER_IMAGE =
+    env.DOCKER_IMAGE || `${ACCOUNT_ID}.dkr.ecr.us-east-1.amazonaws.com/roaster-app:web-demo`;
+const SERVICE_PORT = env.SERVICE_PORT || '8000';
+const SERVICE_NAME_PREFIX = 'roaster-app';
+
 export {
     AWS_REGION,
     AWS_ACCESS_KEY_ID,
@@ -29,6 +35,9 @@ export {
     OAUTH_CLIENT_ID,
     OAUTH_CLIENT_SECRET,
     OAUTH_REDIRECT_URI,
+    SERVICE_DOCKER_IMAGE,
+    SERVICE_NAME_PREFIX,
+    SERVICE_PORT,
     TAG_EMAIL_KEY,
     TAG_HOT_INSTANCE_KEY,
     TAG_ORCHESTRATOR_KEY,
